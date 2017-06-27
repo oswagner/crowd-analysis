@@ -1,5 +1,6 @@
 package com.pucrs.parsing;
 
+import com.pucrs.controller.Person;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -11,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Parser {
+
     private final String paths_d_1 = "res/Paths_D (1).txt";
     private final String paths_d_2 = "res/Paths_D (2).txt";
     private final String paths_d_3 = "res/Paths_D (3).txt";
@@ -24,6 +26,9 @@ public class Parser {
     public static List<Person> personList;
 
     private final File file = new File(paths_d_1);
+
+    // probably not working :(
+    private final Float COORDINATES_SCALING_FACTOR = 1f;
 
     public static Integer maxWidth = 0;
     public static Integer maxHeight = 0;
@@ -98,6 +103,10 @@ public class Parser {
             }
             br.close();
 
+            // if a scaling factor is present, apply it to the viewport
+            maxHeight = maxHeight * COORDINATES_SCALING_FACTOR.intValue();
+            maxHeight = maxHeight * COORDINATES_SCALING_FACTOR.intValue();
+
             System.out.println("|--people discovered: " + personList.size());
             System.out.println("|--maxWidth: " + maxWidth);
             System.out.println("|--maxHeight: " + maxHeight);
@@ -115,5 +124,28 @@ public class Parser {
             System.out.println("| " + p.toString());
         }
         System.out.println("----------------------------------------------------");
+    }
+
+    public void applyScaling() {
+        for (Person person : personList) {
+            for (Coords coords : person.getCoordsList()) {
+                coords.setX(coords.getX()+ COORDINATES_SCALING_FACTOR);
+                coords.setY(coords.getY()+ COORDINATES_SCALING_FACTOR);
+            }
+        }
+    }
+
+    //
+    public void centerCrowdOn(int personIndex) {
+        Float xCoord = personList.get(personIndex).getCurrentCoord().getX();
+        Float yCoord = personList.get(personIndex).getCurrentCoord().getY();
+        for (Person person : personList) {
+            if (person.getId() != personIndex) {
+                for (Coords coords : person.getCoordsList()) {
+                    coords.setX(coords.getX()-xCoord);
+                    coords.setY(coords.getY()-yCoord);
+                }
+            }
+        }
     }
 }

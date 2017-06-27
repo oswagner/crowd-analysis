@@ -1,11 +1,13 @@
-package com.pucrs.parsing;
+package com.pucrs.controller;
+
+import com.pucrs.parsing.Coords;
 
 import java.util.List;
 
 public class Person {
     private List<Coords> coordsList;
 
-    //private List<Relation> relations;
+    private Coords temporaryCoord;
 
     private Coords currentCoord;
 
@@ -24,6 +26,11 @@ public class Person {
     }
 
     public Coords getNextCoord() {
+        if (temporaryCoord != null) {
+            Coords returnElement = temporaryCoord;
+            temporaryCoord = null;
+            return returnElement;
+        }
         if (reverseRoute) {
             if (nextCoordIndex == 0) {
                 reverseRoute = false;
@@ -54,6 +61,14 @@ public class Person {
 
     public List<Coords> getCoordsList() {
         return coordsList;
+    }
+
+    public Coords getTemporaryCoord() {
+        return temporaryCoord;
+    }
+
+    public void setTemporaryCoord(Coords temporaryCoord) {
+        this.temporaryCoord = temporaryCoord;
     }
 
     public int getId() {

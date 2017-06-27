@@ -26,6 +26,14 @@ public class Coords {
         return y;
     }
 
+    public void setX(Float x) {
+        this.x = x;
+    }
+
+    public void setY(Float y) {
+        this.y = y;
+    }
+
     @Override
     public String toString() {
         return "(" + x + ", " + y + ") ";

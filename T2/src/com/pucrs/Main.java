@@ -1,8 +1,7 @@
 package com.pucrs;
 
-import com.pucrs.controller.Controller;
 import com.pucrs.parsing.Parser;
-import com.pucrs.viewer.ViewTwo;
+import com.pucrs.viewer.View;
 
 public class Main {
 
@@ -10,9 +9,8 @@ public class Main {
         Parser parser = new Parser();
         parser.parseFile();
 
-        new ViewTwo();
+        new View();
 
-        // OPTIONAL:
         // print personList content
         Parser.printPersonList();
     }
