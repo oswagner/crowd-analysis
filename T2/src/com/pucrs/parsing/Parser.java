@@ -28,7 +28,7 @@ public class Parser {
     private final File file = new File(paths_d_1);
 
     // probably not working :(
-    private final Float COORDINATES_SCALING_FACTOR = 1f;
+    private final Float COORDINATES_SCALING_FACTOR = .75f;
 
     public static Integer maxWidth = 0;
     public static Integer maxHeight = 0;
@@ -129,8 +129,8 @@ public class Parser {
     public void applyScaling() {
         for (Person person : personList) {
             for (Coords coords : person.getCoordsList()) {
-                coords.setX(coords.getX()+ COORDINATES_SCALING_FACTOR);
-                coords.setY(coords.getY()+ COORDINATES_SCALING_FACTOR);
+                coords.setX(coords.getX()*COORDINATES_SCALING_FACTOR);
+                coords.setY(coords.getY()*COORDINATES_SCALING_FACTOR);
             }
         }
     }

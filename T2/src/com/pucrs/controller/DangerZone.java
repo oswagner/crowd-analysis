@@ -6,7 +6,8 @@ public class DangerZone {
     private Coords coords;
     private Float explosionDelay;
 
-    public DangerZone(Coords coords) {
+    public DangerZone(Coords coords, Float explosionDelay) {
+        this.explosionDelay = explosionDelay;
         this.coords = coords;
     }
 
@@ -15,6 +16,10 @@ public class DangerZone {
     }
 
     public Float getExplosionDelay() {
-        return (explosionDelay-10);
+        return explosionDelay;
+    }
+
+    public void setExplosionDelay(float v) {
+        explosionDelay = v;
     }
 }

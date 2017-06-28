@@ -8,6 +8,7 @@ import com.jogamp.opengl.*;
 import com.jogamp.opengl.awt.GLCanvas;
 
 import com.pucrs.controller.Controller;
+import com.pucrs.controller.DangerZone;
 import com.pucrs.parsing.Coords;
 import com.pucrs.parsing.Parser;
 import com.pucrs.controller.Person;
@@ -22,13 +23,17 @@ import java.util.List;
 public class View extends JPanel implements
         GLEventListener, KeyListener, MouseListener, MouseMotionListener, ActionListener {
 
+    private static final Float CROWD_SIZE_SCALER = 1f;
+
     private Controller controller;
 
     private List<Person> personList;
-
-    private Float rotX = 90f, rotY = 90f, rotX_ini, rotY_ini;
-    private Float obsX = 260f, obsY = 905f, obsZ = 280f, obsX_ini, obsY_ini, obsZ_ini;
-    private Float fAspect = 1f, angle = 44f;
+    // sistema de coordenadas (comparado ao plano cartesiano normal)
+    // x = x
+    // y = z
+    private Float cordTargetX = 450f, cordTargetY = 0f, cordTargetZ = 450f, rotX_ini, rotY_ini;
+    private Float posCameraX = 450f, posCameraY = -400f, posCameraZ = 450f, obsX_ini, obsY_ini, obsZ_ini;
+    private Float fAspect = 1f, angle = 105f;
 
     private float rotateX, rotateY;   // rotation amounts about axes, controlled by keyboard
 
@@ -36,12 +41,7 @@ public class View extends JPanel implements
 
     private Camera camera;
 
-    private static final Float SCALER = 5f;
-    private static final Float SENS_ROT = 5f;
-    private static final Float SENS_OBS = 10f;
-    private static final Float SENS_TRANSL = 30f;
-
-    private GL2 gl;
+    private GL2 GL;
     private GLU glu = new GLU();
 
     private Timer animationTimer;
@@ -57,6 +57,10 @@ public class View extends JPanel implements
         final Animator animator = new Animator(canvas);
 
         canvas.addGLEventListener(this);
+        canvas.addMouseListener(this);
+        canvas.addMouseMotionListener(this);
+        canvas.addKeyListener(this);
+        canvas.setSize(1900, 1500);
 
         frame.add(canvas);
         frame.setSize(1900, 1500);
@@ -88,7 +92,7 @@ public class View extends JPanel implements
         // called when the panel needs to be drawn
 
         GL2 gl = drawable.getGL().getGL2();
-        this.gl = gl;
+        this.GL = gl;
 
         camera = new Camera();
         camera.apply(gl);
@@ -96,10 +100,10 @@ public class View extends JPanel implements
         gl.glClearColor(0, 0, 0, 0);
         gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 
-        gl.glMatrixMode(gl.GL_PROJECTION);  // TODO: Set up a better projection?
+        gl.glMatrixMode(GL.GL_PROJECTION);  // TODO: Set up a better projection?
         gl.glLoadIdentity();
         gl.glOrtho(-1, 1, -1, 1, -2, 2);
-        gl.glMatrixMode(gl.GL_MODELVIEW);
+        gl.glMatrixMode(GL.GL_MODELVIEW);
 
         gl.glLoadIdentity();             // Set up modelview transform.
         gl.glRotatef(rotateY, 0, 1, 0);
@@ -113,7 +117,7 @@ public class View extends JPanel implements
         gl.glPushMatrix();
         gl.glTranslatef(0, 28, 0);
 
-        glut.glutWireTeapot(35);
+        //glut.glutWireTeapot(35);
 
         gl.glPopMatrix();
 
@@ -123,58 +127,73 @@ public class View extends JPanel implements
 
         controller.prepareNextCoords();
 
+        if (controller.hasDanger()) {
+            controller.updateDangerZone();
+        }
+
         gl.glFlush();
 
     }
 
     private void desenhaPessoas() {
-        //gl.glPushMatrix();
-        gl.glColor3f(1, 1, 1);
-        gl.glLineWidth(3);
+        //GL.glPushMatrix();
+        GL.glColor3f(1, 1, 1);
+        GL.glLineWidth(2);
         for (int i = 0; i < personList.size() - 1; i++) {
             desenhaPessoa(personList.get(i).getCurrentCoord());
         }
-        //gl.glPopMatrix();
+        //GL.glPopMatrix();
     }
 
     private void desenhaPessoa(Coords coords) {
-        gl.glBegin(gl.GL_LINES);
-            gl.glVertex3f(coords.getX()+10f, 0.1f,coords.getY()+10f);
-            gl.glVertex3f(coords.getX()+10f, 0.1f, coords.getY()-10f);
-            gl.glVertex3f(coords.getX()-10f, 0.1f, coords.getY()-10f);
-            gl.glVertex3f(coords.getX()-10f, 0.1f, coords.getY()+10f);
-        gl.glEnd();
+        GL.glBegin(GL.GL_LINES);
+            // top
+            GL.glVertex3f(coords.getX()+5f, 0.1f,coords.getY()+5f);
+            GL.glVertex3f(coords.getX()+5f, 0.1f, coords.getY()-5f);
+
+            // right
+            GL.glVertex3f(coords.getX()-5f, 0.1f, coords.getY()+5f);
+            GL.glVertex3f(coords.getX()+5f, 0.1f, coords.getY()+5f);
+
+            // left
+            GL.glVertex3f(coords.getX()+5f, 0.1f, coords.getY()-5f);
+            GL.glVertex3f(coords.getX()-5f, 0.1f, coords.getY()-5f);
+
+            // bottom
+            GL.glVertex3f(coords.getX()-5f, 0.1f, coords.getY()-5f);
+            GL.glVertex3f(coords.getX()-5, 0.1f, coords.getY()+5f);
+        GL.glEnd();
+    }
+
+    private void controlDanger(Float x, Float z) {
+        controller.dropDanger(new DangerZone(new Coords(x, z), 10f));
     }
 
     void posicionaObservador() {
-        //System.out.println("obsX: " + obsX + ", obsY; " + obsY + ", obsZ: " + obsZ);
-        gl.glMatrixMode(gl.GL_MODELVIEW);
-        gl.glLoadIdentity();
-        gl.glTranslatef(-obsX, -obsY, -obsZ);
-        gl.glRotatef(rotX, 1, 0, 0);
-        gl.glRotatef(rotY, 0, 1, 0);
-        camera.lookAt(obsX, obsY, obsZ, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+        GL.glMatrixMode(GL.GL_MODELVIEW);
+        GL.glLoadIdentity();
+        glu.gluLookAt(posCameraX, posCameraY, posCameraZ, cordTargetX, cordTargetY, cordTargetZ, 0f, 0f, 1f);
     }
 
     void desenhaChao() {
-        gl.glColor3f(1, 0, 1);
-        gl.glLineWidth(2);
-        gl.glBegin(gl.GL_LINES);
+        GL.glColor3f(1, 0, 1);
+        GL.glLineWidth(1);
+        GL.glBegin(GL.GL_LINES);
         for (float z = -1000; z <= 1000; z += 10) {
-            gl.glVertex3f(-1000, -0.1f, z);
-            gl.glVertex3f(1000, -0.1f, z);
+            GL.glVertex3f(-1000, -0.1f, z);
+            GL.glVertex3f(1000, -0.1f,z);
         }
         for (float x = -1000; x <= 1000; x += 10) {
-            gl.glVertex3f(x, -0.1f, -1000);
-            gl.glVertex3f(x, -0.1f, 1000);
+            GL.glVertex3f(x, -0.1f, -1000);
+            GL.glVertex3f(x, -0.1f, 1000);
         }
-        gl.glEnd();
-        gl.glLineWidth(1);
+        GL.glEnd();
+        GL.glLineWidth(1);
     }
 
     void especificaParametrosVisualizacao() {
-        gl.glMatrixMode(gl.GL_PROJECTION);
-        gl.glLoadIdentity();
+        GL.glMatrixMode(GL.GL_PROJECTION);
+        GL.glLoadIdentity();
         glu.gluPerspective(angle, fAspect, 0.5, 500);
         posicionaObservador();
     }
@@ -213,13 +232,13 @@ public class View extends JPanel implements
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();  // Tells which key was pressed.
         if (key == KeyEvent.VK_LEFT)
-            rotateY -= 15;
+            cordTargetX = posCameraX = posCameraX - 25f;
         else if (key == KeyEvent.VK_RIGHT)
-            rotateY += 15;
+            cordTargetX = posCameraX = posCameraX + 25f;
         else if (key == KeyEvent.VK_DOWN)
-            rotateX += 15;
+            cordTargetZ = posCameraZ = posCameraZ - 25f;
         else if (key == KeyEvent.VK_UP)
-            rotateX -= 15;
+            cordTargetZ = posCameraZ = posCameraZ + 25f;
         else if (key == KeyEvent.VK_HOME)
             rotateX = rotateY = 0;
         repaint();
@@ -279,7 +298,7 @@ public class View extends JPanel implements
      * Called when the user presses a mouse button on the display.
      */
     public void mousePressed(MouseEvent e) {
-
+        controlDanger(new Float(e.getX()),new Float(e.getY()));
     }
 
     /**
@@ -301,20 +320,20 @@ public class View extends JPanel implements
 ////        System.out.println("getX: " + e.getX() + ", getY: " + e.getY());
 ////
 ////        System.out.println("obsX_ini: " + obsX_ini + ", obsY_ini; " + obsY_ini + ", obsZ_ini: " + obsZ_ini);
-////        System.out.println("obsX: " + obsX + ", obsY; " + obsY + ", obsZ: " + obsZ);
+////        System.out.println("posCameraX: " + posCameraX + ", posCameraY; " + posCameraY + ", posCameraZ: " + posCameraZ);
 ////
 ////        System.out.println("rotX_ini: " + rotX_ini + ", rotY_ini; " + rotY_ini);
-////        System.out.println("rotX: " + rotX + ", rotY; " + rotY);
+////        System.out.println("cordTargetX: " + cordTargetX + ", cordTargetY; " + cordTargetY);
 //
 //        x_ini = 0;
 //        y_ini = 0;
 //
-//        obsX_ini = obsX;
-//        obsY_ini = obsY;
-//        obsZ_ini = obsZ;
+//        obsX_ini = posCameraX;
+//        obsY_ini = posCameraY;
+//        obsZ_ini = posCameraZ;
 //
-//        rotX_ini = rotX;
-//        rotY_ini = rotY;
+//        rotX_ini = cordTargetX;
+//        rotY_ini = cordTargetY;
 //
 //        int x = e.getX();
 //        int y = e.getY();
@@ -322,19 +341,19 @@ public class View extends JPanel implements
 //            int deltax = x_ini - x;
 //            int deltay = y_ini - y;
 //
-//            rotY = rotY_ini - deltax / SENS_ROT;
-//            rotX = rotX_ini - deltay / SENS_ROT;
+//            cordTargetY = rotY_ini - deltax / SENS_ROT;
+//            cordTargetX = rotX_ini - deltay / SENS_ROT;
 //        //}
 ////        if (e.getButton() == MouseEvent.BUTTON2) {
 ////            int deltaz = y_ini - y;
-////            obsZ = obsZ_ini + deltaz / SENS_OBS;
+////            posCameraZ = obsZ_ini + deltaz / SENS_OBS;
 ////        }
 ////        if (e.getButton() == MouseEvent.BUTTON3) {
 ////            int deltax = x_ini - x;
 ////            int deltay = y_ini - y;
 ////
-////            obsX = obsX_ini + deltax / SENS_TRANSL;
-////            obsY = obsY_ini - deltay / SENS_TRANSL;
+////            posCameraX = obsX_ini + deltax / SENS_TRANSL;
+////            posCameraY = obsY_ini - deltay / SENS_TRANSL;
 ////        }
 //        posicionaObservador();
 //

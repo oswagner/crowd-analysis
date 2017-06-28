@@ -9,9 +9,12 @@ public class Main {
         Parser parser = new Parser();
         parser.parseFile();
 
-        new View();
+        // apply scaling?
+        parser.applyScaling();
 
-        // print personList content
+        // print personList content?
         Parser.printPersonList();
+
+        new View();
     }
 }
